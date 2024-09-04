@@ -1,0 +1,544 @@
+---
+title: "Functions"
+---
+
+::: {.content-visible when-profile="book"}
+{{< revealjs "slides/25-functions.html" >}}
+:::
+
+## Learning objectives
+
+We are going to learn about three useful type of function:
+
+- *Vector functions* take one or more vectors as input and return a vector as output.
+
+- *Data frame functions* take a data frame as input and return a data frame as output.
+
+- *Plot functions* that take a data frame as input and return a plot as output.
+
+```{r}
+#| echo: false
+#| warning: false
+
+library(tidyverse) |> suppressPackageStartupMessages()
+library(nycflights13)
+```
+
+## Introduction
+
+Functions are handy because:
+
+-   they automate repetitive tasks.
+
+-   have a name that makes the purpose very clear
+
+-   you only need to update the code in one place as things change
+
+-   it's safer than copy and paste - you won't replicate errors
+
+The common theme for functions is to be consistent.
+
+## When and how to write a function
+
+Have you copy and pasted code more than 2x? Consider a function!
+
+Key steps in creating a function:
+
+1.  Pick a **name** than makes it clear what the function does
+
+2.  **Arguments**, or input variable(s), go inside `function`, like so `function(arguments)`.
+
+3.  The **code** goes inside curly braces `{ }`, after `function()`.
+
+4.  Check your function with a few inputs to make sure it's working.
+
+```{r}
+#| eval: false
+
+name <- function(arguments) {
+  code
+}
+```
+
+
+## Vector functions
+```{r}
+df <- tibble(
+  a = rnorm(5),
+  b = rnorm(5),
+  c = rnorm(5),
+  d = rnorm(5),
+)
+
+df |> mutate(
+  a = (a - min(a, na.rm = TRUE)) / 
+    (max(a, na.rm = TRUE) - min(a, na.rm = TRUE)),
+  b = (b - min(b, na.rm = TRUE)) / 
+    (max(b, na.rm = TRUE) - min(a, na.rm = TRUE)),
+  c = (c - min(c, na.rm = TRUE)) / 
+    (max(c, na.rm = TRUE) - min(c, na.rm = TRUE)),
+  d = (d - min(d, na.rm = TRUE)) / 
+    (max(d, na.rm = TRUE) - min(d, na.rm = TRUE)),
+)
+
+# Can you spot out the error in the above code?
+```
+
+## Writing a vector function
+
+```{r}
+#| eval: false
+
+(a - min(a, na.rm = TRUE)) / (max(a, na.rm = TRUE) - min(a, na.rm = TRUE))
+(b - min(b, na.rm = TRUE)) / (max(b, na.rm = TRUE) - min(b, na.rm = TRUE))
+(c - min(c, na.rm = TRUE)) / (max(c, na.rm = TRUE) - min(c, na.rm = TRUE))
+(d - min(d, na.rm = TRUE)) / (max(d, na.rm = TRUE) - min(d, na.rm = TRUE))  
+```
+
+To make this a bit clearer we can replace the bit that varies with █:
+
+```{r}
+#| eval: false
+
+(█ - min(█, na.rm = TRUE)) / (max(█, na.rm = TRUE) - min(█, na.rm = TRUE))
+```
+
+To turn this into a function you need three things:
+
+- **A name**. Here we’ll use `rescale01` because this function rescales a vector to lie between 0 and 1.
+
+- **The arguments**. We have just one argument that we’ll call  `x` because this is the conventional name for a numeric vector.
+
+- **The body**. The body is the code that’s repeated across all the calls.
+
+## Using the `rescale01()` function
+
+```{r}
+rescale01 <- function(x) {
+  (x - min(x, na.rm = TRUE)) / (max(x, na.rm = TRUE) - min(x, na.rm = TRUE))
+}
+
+```
+
+```{r}
+rescale01(c(-10, 0, 10))
+
+rescale01(c(1, 2, 3, NA, 5))
+```
+
+## Using the `rescale01()` function (cont.) 
+
+Then you can rewrite the call to `mutate()` as:
+
+```{r}
+df |> mutate(
+  a = rescale01(a),
+  b = rescale01(b),
+  c = rescale01(c),
+  d = rescale01(d),
+)
+```
+
+## Other vector functions
+
+Here, we want to strip percent signs, commas, and dollar signs from a string before converting it into a number:
+
+```{r}
+# https://twitter.com/NVlabormarket/status/1571939851922198530
+
+clean_number <- function(x) {
+  is_pct <- str_detect(x, "%")
+  num <- x |> 
+    str_remove_all("%") |> 
+    str_remove_all(",") |> 
+    str_remove_all(fixed("$")) |> 
+    as.numeric(x)
+  if_else(is_pct, num / 100, num)
+}
+
+clean_number("$12,300")
+
+clean_number("45%")
+```
+
+## Data frame functions
+
+When you notice yourself copying and pasting multiple verbs multiple times, you might think about writing a data frame function. 
+
+Data frame functions work like dplyr verbs: 
+
+- they take a data frame as the first argument, 
+- some extra arguments that say what to do with it, 
+- and return a data frame or vector.
+
+##  The problem of indirection
+
+When you start writing functions that use dplyr verbs you rapidly hit the problem of indirection. 
+
+```{r}
+grouped_mean <- function(df, group_var, mean_var) {
+  df |> 
+    group_by(group_var) |> 
+    summarize(mean(mean_var))
+}
+```
+
+```{r}
+#| error: true
+
+diamonds |> 
+  grouped_mean(cut, carat)
+```
+
+## The problem of indirection explained
+
+- To make the problem a bit more clear, we can use a made up data frame:
+
+```{r}
+df <- tibble(
+  mean_var = 1,
+  group_var = "g",
+  group = 1,
+  x = 10,
+  y = 100
+)
+
+df |> 
+  grouped_mean(group, x)
+
+
+df |> 
+  grouped_mean(group, y)
+```
+
+- Regardless of how we call `grouped_mean()` it always does `df |> group_by(group_var) |> summarize(mean(mean_var))`, instead of `df |> group_by(group) |> summarize(mean(x))` or `df |> group_by(group) |> summarize(mean(y))`. 
+- This is a problem of *indirection*, and it arises because dplyr uses **tidy evaluation** to allow you to refer to the names of variables inside your data frame without any special treatment.
+
+## Tidy evaluation and embracing
+
+- Tidy evaluation makes our data analyses very concise as you never have to say which data frame a variable comes from, but the downside  comes when we want to wrap up repeated tidyverse code into a function.
+- Our solution to overcome to this problem called **embracing** 🤗. Embracing a variable means to wrap it in braces so (e.g.) `var` becomes `{{ var }}`.
+
+```{r}
+grouped_mean <- function(df, group_var, mean_var) {
+  df |> 
+    group_by({{ group_var }}) |> 
+    summarize(mean({{ mean_var }}))
+}
+
+df |>
+  grouped_mean(group, x)
+```
+
+## When to embrace?
+
+So the key challenge in writing data frame functions is figuring out which arguments need to be embraced. There are two terms to look for in the docs which correspond to the two most common sub-types of tidy evaluation:
+
+- **Data-masking:** this is used in functions like `arrange()`, `filter()`, and `summarize()` that *compute* with variables.
+
+- **Tidy-selection:** this is used for functions like `select()`, `relocate()`, and `rename()` that *select* variables.
+
+## Common use cases
+
+```{r}
+summary6 <- function(data, var) {
+  data |> summarize(
+    min = min({{ var }}, na.rm = TRUE),
+    mean = mean({{ var }}, na.rm = TRUE),
+    median = median({{ var }}, na.rm = TRUE),
+    max = max({{ var }}, na.rm = TRUE),
+    n = n(),
+    n_miss = sum(is.na({{ var }})),
+    .groups = "drop"
+  )
+}
+
+diamonds |>
+  summary6(carat)
+
+
+diamonds |> 
+  group_by(cut) |> 
+  summary6(carat)
+  
+```
+
+## Plot functions
+
+```{r}
+#| eval: false
+
+diamonds |> 
+  ggplot(aes(x = carat)) +
+  geom_histogram(binwidth = 0.1)
+
+diamonds |> 
+  ggplot(aes(x = carat)) +
+  geom_histogram(binwidth = 0.05)
+```
+
+You can take the code above and create a function, keeping in mind that `aes()` is a data-masking function and you'll need to embrace.
+```{r}
+histogram <- function(df, var, binwidth = NULL) {
+  df |> 
+    ggplot(aes(x = {{ var }})) + 
+    geom_histogram(binwidth = binwidth)
+}
+
+diamonds |> 
+  histogram(carat, 0.1)
+```
+
+Note that because `histogram()` returns a ggplot2 plot, meaning you can still add on additional components if you want. Just remember to switch from `|>` to `+`:
+
+```{r}
+#| eval: false
+
+diamonds |> 
+  histogram(carat, 0.1) +
+  labs(x = "Size (in carats)", y = "Number of diamonds")
+```
+
+## Adding more variables to plot functions
+
+Here, we want an easy way to eyeball whether or not a dataset is linear by overlaying a smooth line and a straight line:
+
+```{r}
+# https://twitter.com/tyler_js_smith/status/1574377116988104704
+linearity_check <- function(df, x, y) {
+  df |>
+    ggplot(aes(x = {{ x }}, y = {{ y }})) +
+    geom_point() +
+    geom_smooth(method = "loess", formula = y ~ x, color = "red", se = FALSE) +
+    geom_smooth(method = "lm", formula = y ~ x, color = "blue", se = FALSE) 
+}
+
+starwars |> 
+  filter(mass < 1000) |> 
+  linearity_check(mass, height)
+```
+
+## Combining with other tidyverse
+
+We can combine a dash of data manipulation with ggplot2, as seen below.
+
+You'll notice we have to use a new operator here, `:=`, because we are generating the variable name based on user-supplied data. Variable names go on the left hand side of `=`, but R’s syntax doesn’t allow anything to the left of `=` except for a single literal name. 
+```{r}
+sorted_bars <- function(df, var) {
+  df |> 
+    mutate({{ var }} := fct_rev(fct_infreq({{ var }})))  |>
+    ggplot(aes(y = {{ var }})) +
+    geom_bar()
+}
+
+diamonds |> 
+  sorted_bars(clarity)
+```
+
+## Labeling
+
+Here, we label the output with the variable and the bin width that was used in our previous histogram using the `rlang::englue()`to go under the covers of tidy evaluation. `rlang` is a low-level package that’s used by just about every other package in the tidyverse because it implements tidy evaluation (as well as many other useful tools). `englue()` works similarly to `str_glue()`, so any value wrapped in `{ }` will be inserted into the string. 
+
+```{r}
+histogram <- function(df, var, binwidth) {
+  label <- rlang::englue("A histogram of {{var}} with binwidth {binwidth}")
+  
+  df |> 
+    ggplot(aes(x = {{ var }})) + 
+    geom_histogram(binwidth = binwidth) + 
+    labs(title = label)
+}
+
+diamonds |> 
+  histogram(carat, 0.1)
+```
+
+## Style: Making functions readable
+
+Be consistent in your naming and coding of functions
+
+**Names:**
+
+- Functions should be verbs (action, state, or occurrence), arguments should be nouns (people places or things).
+
+- Be consistent in using snake_case or camelCase.
+
+- For sets of functions, use a common prefix
+
+- Don't overwrite existing function
+
+**Comments:**
+
+- Use comments to explain the 'why' of the code
+
+- Use lines of - or = to break up code into sections
+
+## Summary
+
+- In this chapter we learned how to write functions for three useful scenarios: **creating a vector**, **creating a data frames**, or **creating a plot**.
+
+
+- To learn more about programming with tidy evaluation, see useful recipes in [programming with dplyr](https://dplyr.tidyverse.org/articles/programming.html); and [programming with tidyr](https://tidyr.tidyverse.org/articles/programming.html); learn more about the theory in [What is data-masking and why do I need](https://rlang.r-lib.org/reference/topic-data-mask.html)
+
+
+- To learn more about reducing duplication in your ggplot2 code, read the 
+[ Programming with ggplot2](https://ggplot2-book.org/programming.html) chapter of the ggplot2 book.
+
+- For more advice on function style, see the [ tidyverse style guide](https://style.tidyverse.org/functions.html)
+
+
+## Meeting Videos
+
+### Cohort 5
+
+{{< video https://www.youtube.com/embed/B5097Rbsafc >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+  
+```
+00:24:22	Jon Harmon (jonthegeek):	Famous computer science quote: There are only two hard things in Computer Science: cache invalidation and naming things.
+
+-- Phil Karlton
+00:32:31	Jon Harmon (jonthegeek):	> identical(1.0, 1L)
+[1] FALSE
+00:32:50	Jon Harmon (jonthegeek):	> 1.0 == 1L
+[1] TRUE
+00:33:31	Jon Harmon (jonthegeek):	identical(as.integer(1.0), 1L)
+00:33:49	Jon Harmon (jonthegeek):	identical(1.0, as.double(1L))
+00:38:39	Njoki Njuki Lucy:	is there a difference between ifelse() and if, else function?
+00:39:32	Jon Harmon (jonthegeek):	ifelse()
+if … else if … else
+00:40:15	Jon Harmon (jonthegeek):	ifelse(c(TRUE, FALSE, TRUE), "yes", "no")
+00:40:28	Jon Harmon (jonthegeek):	> ifelse(c(TRUE, FALSE, TRUE), "yes", "no")
+[1] "yes" "no"  "yes"
+00:40:52	Jon Harmon (jonthegeek):	> ifelse(1:10 == 8, "it's 8", "it isn't")
+ [1] "it isn't" "it isn't" "it isn't" "it isn't" "it isn't" "it isn't" "it isn't"
+ [8] "it's 8"   "it isn't" "it isn't"
+00:41:12	Jon Harmon (jonthegeek):	> ifelse(1:10 == 8, 8, NA)
+ [1] NA NA NA NA NA NA NA  8 NA NA
+00:42:13	Ryan Metcalf:	Possible Reference, Section 7.4, Missing Values. It makes a reference to `ifelse()` function: https://r4ds.had.co.nz/exploratory-data-analysis.html?q=ifelse()#missing-values-2
+00:43:01	Jon Harmon (jonthegeek):	if else
+ifelse
+if_else
+00:43:17	Njoki Njuki Lucy:	thank you!
+00:43:22	Njoki Njuki Lucy:	big time:)
+00:50:35	Njoki Njuki Lucy:	what exactly is the trim doing? I didn't understand
+00:52:05	Jon Harmon (jonthegeek):	> mean(c(1, 90:100), trim = 0)
+[1] 87.16667
+> mean(c(1, 90:100), trim = 0.1)
+[1] 94.5
+> mean(c(1, 90:100), trim = 0.5)
+[1] 94.5
+00:52:46	Jon Harmon (jonthegeek):	> mean(1:10, trim = 0.5)
+[1] 5.5
+00:54:10	Njoki Njuki Lucy:	okay, understood. thanks!
+00:58:15	Jon Harmon (jonthegeek):	myfun <- function(x, ...) {
+  mean(x, ...)
+}
+00:58:47	Jon Harmon (jonthegeek):	> myfun(1:10, trim = 0.1)
+[1] 5.5
+00:59:13	Jon Harmon (jonthegeek):	> myfun(1:10, trim = 0.1)
+Error in myfun(1:10, trim = 0.1) : unused argument (trim = 0.1)
+01:01:34	Jon Harmon (jonthegeek):	myfun <- function(x, funname, ...) {
+  if (funname == "mean") {
+    mean(x, ...)
+  } else {
+    log(x, ...)
+  }
+}
+01:04:11	Jon Harmon (jonthegeek):	myfun <- function(...) {
+  dots <- list(...)
+  names(dots)
+}
+
+myfun(a = 1)
+01:05:28	Jon Harmon (jonthegeek):	[1] "a"
+01:05:49	Jon Harmon (jonthegeek):	dots <- list(a = 1)
+01:09:32	Jon Harmon (jonthegeek):	myfun <- function(a, b) {
+  a
+}
+myfun(1:10, Sys.sleep(60))
+```
+:::
+
+{{< video https://www.youtube.com/embed/rsRImj294pM >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+  
+```
+See Chapter 20 for the part of the log that's relevant to that chapter.
+```
+:::
+
+
+
+### Cohort 6
+
+{{< video https://www.youtube.com/embed/jDsmsNUHfPE >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+  
+```
+00:23:48	Daniel Adereti:	Range() function in R returns the maximum and minimum value of the vector and column of the dataframe in R. range() function of the column of dataframe
+00:45:42	Daniel Adereti:	My guess for the inf, -inf is just to assign the respective 1 and 0 to the inf and -inf
+00:46:26	Daniel Adereti:	and to rescale the x vector expressing all variables with inf as 1 and -inf as 0
+00:58:38	Adeyemi Olusola:	Thanks for the wonderful talk. Sorry, I have to drop off now. Thanks
+00:58:41	Daniel Adereti:	it might make sense to stop at 19.2
+```
+:::
+
+{{< video https://www.youtube.com/embed/whu8LeXt0VE >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log  
+```
+00:03:15	Marielena Soilemezidi:	Hello there! :)
+00:03:51	Daniel:	Hello!
+00:32:16	Daniel:	I think it aim to check if any of the vector characters == 8, if yes, it returns 8, if no, it returns "Not available"
+00:44:24	Daniel:	Hello all, please remember we need volunteers for next week's class: Vectors
+```
+:::
+
+
+### Cohort 7
+
+{{< video https://www.youtube.com/embed/c5FtLt0bGRs >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+
+```
+00:15:05	Oluwafemi Oyedele:	start
+00:58:23	Oluwafemi Oyedele:	https://dplyr.tidyverse.org/articles/programming.html
+00:58:37	Oluwafemi Oyedele:	https://tidyr.tidyverse.org/articles/programming.html
+00:58:47	Oluwafemi Oyedele:	https://rlang.r-lib.org/reference/topic-data-mask.html
+00:58:54	Oluwafemi Oyedele:	https://ggplot2-book.org/programming.html
+00:59:01	Oluwafemi Oyedele:	https://style.tidyverse.org/functions.html
+00:59:43	Oluwafemi Oyedele:	stop
+```
+:::
+
+
+### Cohort 8
+
+{{< video https://www.youtube.com/embed/10mBNkkLdo0 >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+
+```
+00:10:01	Abdou:	Hi everyone
+00:10:12	Shamsuddeen Hassan Muhammad:	hello
+00:10:31	Shamsuddeen Hassan Muhammad:	Ahmad can hear me
+00:10:37	Shamsuddeen Hassan Muhammad:	Abdul we can hear you
+00:10:46	Abdou:	No
+00:10:54	Shamsuddeen Hassan Muhammad:	Can u hear me Abduol?
+00:11:07	Abdou:	No I can’t
+00:11:12	Shamsuddeen Hassan Muhammad:	Re-join
+00:14:21	Ahmed Mamdouh:	Start
+00:47:09	Abdou:	Stop
+```
+:::

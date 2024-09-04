@@ -1,0 +1,264 @@
+---
+title: "Workflow: basics"
+---
+
+::: {.content-visible when-profile="book"}
+{{< revealjs "slides/02-workflow_basics.html" >}}
+:::
+
+## Learning objectives
+
+-   Review some basic R coding.
+-   Follow good **style conventions** when writing code.
+-   Explain the importance of commenting your code.
+-   Recognize good practices when naming objects.
+-   Confidently call **functions** in R.
+
+## Basic math calculations
+
+```{r}
+#| label: 03-basic-math
+
+1 / 200 * 30
+(59 + 73 + 2) / 3
+sin(pi / 2)
+```
+
+## Create new objects
+
+Use the 'assignment operator' `<-`
+
+-   Windows: 'ALT -'. 
+-   Mac: 'Option -'.
+-   Pronunciation: `x <- 3*4`
+    -   "to ... assign" or "is assigned to": "To object x ***assign*** three by four" OR "three by four ***is assigned to*** object x" 
+    -   "gets": "x ***gets*** 3 times 4".
+
+## Create new objects: Reverse assign
+
+Can go the other way `->`, eg graphs:
+
+```{r}
+#| label: 03-reverse-assign
+
+library(ggplot2)
+ggplot(mtcars, aes(wt, hp)) +
+  geom_point() -> plot01
+
+plot01
+```
+
+## Create new objects: Double assign
+
+-   *Double assign or scoping assign `<<-`?!*
+
+## Combining elements
+
+-   Combine elements into a vector with `c()`
+-   Basic arithmetic operations applied to every element of a vector. 
+
+```{r}
+#| label: 03-vector-arithmetic
+
+primes <- c(2, 3, 5, 7, 11, 13)
+primes * 2
+```
+
+
+## Comments
+
+Use `#` to insert comments in R. 
+  
+```{r}
+#| label: 03-comments
+#| eval: false
+
+# Create vector of primes 
+primes <- c(2, 3)
+
+# Multiply primes by 2
+primes * 2
+```
+
+## Comments: Why?
+
+-   Commenting your own code can save (future) you & and collaborators time.
+- *Why* of your code, not the *how* or *what.* 
+    -   Bad: `# Changed default value to 0.9`
+    -   Good: `# Increased smoothing parameter to better capture the trend in the data.`
+
+
+## Assigning names
+
+-   Names must start with a letter, contain letters, numbers, `_`, `.`. 
+-   Good style convention ➡️ more readable code.
+-   Use descriptive names. Long names are ok!
+-   Book recommends `snake_case` (see next slide). 
+-   R is case-sensitive! And it can't read your mind.
+-   Typos matter! 
+
+## Assigning names: Cases
+
+![](images/cases.png)
+
+## Calling Functions
+
+Functions overall look like this: 
+
+```{r}
+#| label: 03-function-signature
+#| eval: false
+
+function_name(argument1 = value 1, 
+              argument2 = value 2, 
+              ...)
+```
+
+-   Functions and objects are always displayed in the Environment tab in RStudio. 
+
+## Calling Functions: Arguments
+
+-   TAB to show possible completions of function & arguments.
+    -   Use ESC to abort the suggestions. 
+-   Can usually skip arg names, but can make code more readable. 
+-   Order of named args isn't important
+-   If you skip names remember the order of the defined function. 
+
+```{r}
+#| label: 03-arg-order
+#| eval: false
+
+# All of these are equivalent
+seq(from = 1,  to = 10)
+seq(to = 10,  from = 1)
+seq(1, 10)
+#> [1]  1  2  3  4  5  6  7  8  9 10
+```
+  
+## Other RStudio Features
+
+Explore on your own:
+
+-   Console: ⬆️ to see console history
+-   Console: type, then (ctrl/cmd)- ⬆️ to search history
+-   (alt/opt)-shift-k to see lots of shortcuts
+-   *One of my recent favorites: alt-command-⬇️.*
+
+## Exercises
+
+1. Why does this code not work? 
+
+```{r}
+#| label: 03-ex-01
+#| eval: false
+
+my_variable <- 10
+my_varıable 
+#> Error in eval(expr, envir, enclos): object 'my_varıable' not found
+```
+
+> Because the name on the second line doesn't include and `i`. Remember, typos matter. 
+
+2. Tweak each of the following R commands so that they run correctly:
+
+```{r}
+#| label: 03-ex-02
+#| eval: false
+
+libary(todyverse)
+
+ggplot(dTA = mpg) + 
+  geom_point(maping = aes(x = displ y = hwy)) +
+  geom_smooth(method = "lm)
+```
+
+> Here is the correct code with no typos: 
+
+```{r}
+#| label: 03-ex-02b
+#| eval: false
+
+library(tidyverse)
+
+ggplot(data = mpg)+
+  geom_point(mapping = aes(x = display, y = hwy)) +
+  geom_smooth(method = "lm")
+```
+
+3. Press Option + Shift + K / Alt + Shift + K. What happens? How can you get to the same place using the menus?
+
+> This takes you to the list of shortcuts. Another way of getting here is: Tools > Keyboard shortcuts help. 
+
+4. Let’s revisit an exercise from the Section 2.6. Run the following lines of code. Which of the two plots is saved as mpg-plot.png? Why?
+
+```{r}
+#| label: 03-ex-04
+#| eval: false
+
+my_bar_plot <- ggplot(mpg, aes(x = class)) +
+  geom_bar()
+my_scatter_plot <- ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point()
+ggsave(filename = "mpg-plot.png", plot = my_bar_plot)
+```
+
+> The arguments for ggsave are (`?ggsave` in the console): filename, plot, device, path, ...). Plot refers to the plot to be saved, so in this case the first plot named `my_bar_plot` will be saved as mpg-plot.png. 
+
+## Meeting Videos
+
+### Cohort 5
+
+{{< video https://www.youtube.com/embed/nQnMm6kyJbE >}}
+
+::: {.callout-tip collapse="true"}
+
+## Meeting chat log
+
+```         
+00:14:44    Jon Harmon (jonthegeek):    Ignore the URL on these, I should have made my coworker crop those out since it isn't relevant outside of our work environment 🙃
+00:47:00    Jon Harmon (jonthegeek):    ?variable.names
+00:58:53    Becki R. (she/her): jon_doe is an object?
+00:59:05    Wai-Yin:    Yes.
+01:10:33    Becki R. (she/her): Is there a list of verbal substitutions like "<- = get"?
+01:16:05    Jon Harmon (jonthegeek):    Not yet! Some more will come up as we go through the book... and I plan on putting something together with them before too long!
+01:16:56    Becki R. (she/her): Nice!
+01:20:44    docksbox@pm.me: Thanks
+01:22:41    Becki R. (she/her): Thanks everyone! I will not be here next week.
+```
+
+:::
+
+### Cohort 7
+
+{{< video https://www.youtube.com/embed/JDOQDfpYBmY >}}
+
+::: {.callout-tip collapse="true"}
+
+## Meeting chat log
+
+```         
+00:29:38    Dolleen Osundwa:    is a tibble similar to the table () function?
+```
+
+:::
+
+### Cohort 8
+
+{{< video https://www.youtube.com/embed/FeSYfRx2esU >}}
+
+::: {.callout-tip collapse="true"}
+
+## Meeting chat log
+
+```         
+00:06:13    Shamsuddeen Muhammad:   book_club-py4da
+00:06:16    Shamsuddeen Muhammad:   #book_club-py4da
+00:08:47    Shamsuddeen Muhammad:   https://www.youtube.com/watch?v=8tq1C8spV_g
+00:09:03    Abdou Daffeh:   Hey everyone
+00:34:25    Abdou Daffeh:   sorry do you mean vscode?
+00:34:45    Hamza:  Yes he is using VSCode
+00:35:13    Abdou Daffeh:   thanks, I have to check it out
+00:41:22    Shamsuddeen Muhammad:   https://www.rscreencasts.com/content_pages/hbcu-enrollment.html
+```
+
+:::

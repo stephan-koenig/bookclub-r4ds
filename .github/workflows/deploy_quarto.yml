@@ -1,0 +1,10 @@
+on:
+  push:
+    branches: main
+    paths-ignore:
+      - 'README.md'
+  workflow_dispatch:
+
+jobs:
+  publish-quarto:
+    uses: stephan-koenig/r4dsactions/.github/workflows/deploy_quarto.yml@main

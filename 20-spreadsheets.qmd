@@ -1,0 +1,413 @@
+---
+title: "Spreadsheets"
+---
+
+::: {.content-visible when-profile="book"}
+{{< revealjs "slides/20-spreadsheets.html" >}}
+:::
+
+## Learning objectives
+
+- We are going to learn about the various ways in which we can get data out of a spread sheet or google sheet.
+
+- We are going to learn how to write data from spread sheet and google sheet.
+
+## Data Organization in Spreadsheets
+[Data Organization in Spreadsheets](https://www.tandfonline.com/doi/full/10.1080/00031305.2017.1375989) is a paper with some excellent tips:  
+- Be Consistent  
+- Choose Good Names for Things  
+- Write Dates as YYYY-MM-DD  
+- No Empty Cells  
+- Put Just One Thing in a Cell  
+- Make it a Rectangle  
+- Create a Data Dictionary  
+- No Calculations in the Raw Data Files  
+- Do Not Use Font Color or Highlighting as Data  
+- Make Backups  
+- Use Data Validation to Avoid Errors  
+- Save the Data in Plain Text Files  
+
+
+## Excel
+
+Microsoft Excel is a widely used spreadsheet software program where data are organized in worksheets inside of spreadsheet files.
+
+## Prerequisites
+
+```{r}
+#| warning: false
+#| message: false
+
+library(readxl)
+library(tidyverse)
+library(writexl)
+```
+
+## Getting started
+
+Most of readxl’s functions allow you to load Excel spreadsheets into R:
+
+- **read_xls()** reads Excel files with **xls** format.
+
+- **read_xlsx()** read Excel files with **xlsx** format.
+
+- **read_excel()** can read files with both **xls** and **xlsx** format. It guesses the file type based on the input.
+
+## Reading Excel spreadsheets
+
+![](https://r4ds.hadley.nz/screenshots/import-spreadsheets-students.png)
+
+- read_excel() will read the file in as a tibble.
+
+```{r}
+students <- read_excel("data/students.xlsx")
+
+
+students
+```
+
+
+## Column names 
+The column names are all over the place. We can provide column names that follow a consistent format; we recommend snake_case using the col_names argument.
+
+```{r}
+read_excel(
+  "data/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age")
+)
+```
+
+## Skiping the first row
+
+```{r}
+read_excel(
+  "data/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1
+)
+```
+
+## Dealing with the missing data
+
+```{r}
+read_excel(
+  "data/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A")
+)
+```
+
+## Specify the column types
+
+```{r}
+read_excel(
+  "data/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = c("numeric", "text", "text", "text", "numeric")
+)
+```
+
+## Read file and then fix data
+
+```{r}
+students <- read_excel(
+  "data/students.xlsx",
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = c("numeric", "text", "text", "text", "text")
+)
+
+
+students
+
+
+
+students <- students |>
+  mutate(
+    age = if_else(age == "five", "5", age),
+    age = parse_number(age)
+  )
+
+
+students
+```
+
+
+## Reading worksheets
+
+An important feature that distinguishes spreadsheets from flat files is the notion of multiple sheets.
+
+![](https://r4ds.hadley.nz/screenshots/import-spreadsheets-penguins-islands.png)
+
+
+## Read single worksheet
+You can read a single worksheet from a spreadsheet with the sheet argument in read_excel(). The default, which we’ve been relying on up until now, is the first sheet.
+
+```{r}
+read_excel("data/penguins.xlsx", sheet = "Torgersen Island")
+```
+
+
+## read_excel with NAs
+Some variables that appear to contain numerical data are read in as characters due to the character string "NA" not being recognized as a true NA.
+
+```{r}
+penguins_torgersen <- read_excel("data/penguins.xlsx", sheet = "Torgersen Island", na = "NA")
+
+penguins_torgersen
+```
+
+## excel_sheets for information
+Alternatively, we can use **excel_sheets()** to get information on all worksheets in an Excel spreadsheet, and then read the one(s) you’re interested in.
+
+```{r}
+excel_sheets("data/penguins.xlsx")
+```
+
+Once you know the names of the worksheets, you can read them in individually with read_excel().
+
+```{r}
+penguins_biscoe <- read_excel("data/penguins.xlsx", sheet = "Biscoe Island", na = "NA")
+
+penguins_dream  <- read_excel("data/penguins.xlsx", sheet = "Dream Island", na = "NA")
+```
+
+```{r}
+dim(penguins_torgersen)
+
+dim(penguins_biscoe)
+
+dim(penguins_dream)
+
+```
+## Bind data for single dataframe
+We can put them together with bind_rows().
+
+```{r}
+penguins <- bind_rows(penguins_torgersen, penguins_biscoe, penguins_dream)
+
+penguins
+```
+
+
+
+## Reading part of a sheet
+
+![](https://r4ds.hadley.nz/screenshots/import-spreadsheets-deaths.png)
+
+## Example file deaths.xlsx
+
+This spreadsheet is one of the example spreadsheets provided in the readxl package. We can use the readxl_example() function to locate the spreadsheet on your system in the directory where the package is installed. 
+
+```{r}
+deaths_path <- readxl_example("deaths.xlsx")
+
+deaths <- read_excel(deaths_path)
+
+deaths
+```
+
+## read_excel with range
+Here the data we want to read in starts in cell A5 and ends in cell F15. In spreadsheet notation, this is A5:F15, which we supply to the range argument:
+
+```{r}
+read_excel(deaths_path, range = "A5:F15")
+```
+
+
+## Data types
+
+In CSV files, all values are strings. This is not particularly true to the data, but it is simple: everything is a string.
+
+The underlying data in Excel spreadsheets is more complex. A cell can be one of four things:
+
+- A boolean, like TRUE, FALSE, or NA.
+
+- A number, like “10” or “10.5”.
+
+- A datetime, which can also include time like “11/1/21” or “11/1/21 3:00 PM”.
+
+- A text string, like “ten”.
+
+## Writing to Excel
+
+```{r}
+bake_sale <- tibble(
+  item     = factor(c("brownie", "cupcake", "cookie")),
+  quantity = c(10, 5, 8)
+)
+
+
+bake_sale
+```
+
+```{r}
+#| eval: false
+
+write_xlsx(bake_sale, path = "data/bake-sale.xlsx")
+```
+
+- This is how the data look like in excel
+
+![](https://r4ds.hadley.nz/screenshots/import-spreadsheets-bake-sale.png)
+
+## Lost datatypes when reading
+Just like reading from a CSV, information on data type is lost when we read the data back in. This makes Excel files unreliable for caching interim results as well. For alternatives, see [Writing to a file](https://r4ds.hadley.nz/data-import.html#sec-writing-to-a-file)
+
+```{r}
+read_excel("data/bake-sale.xlsx")
+```
+
+## Formatted output
+
+The writexl package is a light-weight solution for writing a simple Excel spreadsheet, but if you’re interested in additional features like writing to sheets within a spreadsheet and styling, you will want to use the [openxlsx package.](https://ycphs.github.io/openxlsx) We won’t go into the details of using this package here, but we recommend reading[https://ycphs.github.io/openxlsx/articles/Formatting.html](https://ycphs.github.io/openxlsx/articles/Formatting.html) 
+
+## Google Sheets
+
+Google Sheets is another widely used spreadsheet program included. It’s free and web-based. Just like with Excel, in Google Sheets data are organized in worksheets (also called sheets) inside of spreadsheet files.
+
+## Prerequisites
+
+```{r}
+library(googlesheets4)  
+library(tidyverse)  
+```
+
+A quick note about the name of the package: googlesheets4 uses v4 of the Sheets API v4 to provide an R interface to Google Sheets, hence the name.
+
+## Getting started with Google Sheets
+
+- The main function of the **googlesheets4 package** is **read_sheet()**, which reads a Google Sheet from a URL or a file id. This function also goes by the name **range_read()**.
+
+- You can create a brand new sheet with **gs4_create()** or write to an existing sheet with **sheet_write()** and friends.
+
+- You can read from a public Google Sheet without authenticating with your Google account and with **gs4_deauth()**.
+
+##  Reading Google Sheets
+
+![](https://r4ds.hadley.nz/screenshots/import-googlesheets-students.png)
+- The first argument to read_sheet() is the URL of the file to read, and it returns a tibble:
+```{r}
+#| label: gsheets01
+#| message: false
+#| warning: false
+
+gs4_deauth()
+students_url <- "https://docs.google.com/spreadsheets/d/1V1nPp1tzOuutXFLb3G9Eyxi3qxeEhnOXUzL5_BcCQ0w"
+
+read_sheet(students_url)
+
+```
+## Define datatypes
+
+```{r}
+#| label: gsheets02
+#| message: false
+#| warning: false
+
+read_sheet(
+  students_url,
+  col_names = c("student_id", "full_name", "favourite_food", "meal_plan", "age"),
+  skip = 1,
+  na = c("", "N/A"),
+  col_types = "dcccc"
+)
+
+```
+
+- Note that we defined column types a bit differently here, using short codes. For example, “dcccc” stands for “double, character, character, character, character”.
+
+## Read specific sheet
+```{r}
+#| label: gsheets03
+#| message: false
+#| warning: false
+
+penguins_url <- "https://docs.google.com/spreadsheets/d/1aFu8lnD_g0yjF5O-K6SFgSEWiHPpgvFCF0NY9D6LXnY"
+
+read_sheet(penguins_url, sheet = "Torgersen Island")
+```
+
+## List of sheets
+We can obtain a list of all sheets within a Google Sheet with sheet_names():
+
+```{r}
+#| label: gsheets04
+#| warning: false
+#| message: false
+
+sheet_names(penguins_url)
+```
+
+## Read portion of the sheet
+
+```{r}
+#| label: gsheets05
+#| message: false
+#| warning: false
+
+deaths_url <- gs4_example("deaths")
+
+read_sheet(deaths_url, range = "A5:F15")
+
+```
+
+## Writing to Google Sheets
+
+We can write from R to Google Sheets with write_sheet(). The first argument is the data frame to write, and the second argument is the name (or other identifier) of the Google Sheet to write to:
+
+```{r}
+#| label: gsheets06
+#| message: false
+#| warning: false
+#| eval: false
+
+write_sheet(deaths)
+```
+
+## Authentication
+
+While we can read from a public Google Sheet without authenticating with your Google account, reading a private sheet or writing to a sheet requires authentication so that **googlesheets4** can view and manage your Google Sheets. We can check the [googlesheet4 vignette](https://googlesheets4.tidyverse.org/articles/auth.html) on how to setup the your account in R.
+
+
+
+## Summary
+![](https://media.tenor.com/AAhRO0tvnT0AAAAM/excited-im.gif)
+
+
+Microsoft Excel and Google Sheets are two of the most popular spreadsheet systems. Being able to interact with data stored in Excel and Google Sheets files directly from R is a superpower! 
+
+- In this chapter we learned how to read data into R from spreadsheets and from Excel with read_excel() from the readxl package and from Google Sheets with read_sheet() from the googlesheets4 package. 
+
+
+
+
+
+## Meeting Videos
+
+### Cohort 7
+
+{{< video https://www.youtube.com/embed/1OeA2Ogi5is >}}
+
+
+### Cohort 8
+
+{{< video https://www.youtube.com/embed/UPwib5lZ78o >}}
+
+::: {.callout-tip collapse="true"}
+## Meeting chat log
+```
+00:08:22	Abdou:	Hello
+00:12:42	Abdou:	Start
+00:57:03	shamsuddeen:	Thank you Ahmad
+00:57:17	shamsuddeen:	I will be using the googlesheet
+00:57:24	shamsuddeen:	From now
+00:58:34	Abdou:	Thanks
+00:58:38	Abdou:	end
+00:58:45	shamsuddeen:	See you next week
+```
+:::

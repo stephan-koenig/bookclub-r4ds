@@ -7,4 +7,4 @@ on:
 
 jobs:
   publish-quarto:
-    uses: r4ds/r4dsactions/.github/workflows/deploy_quarto.yml@main
+    uses: stephan-koenig/r4dsactions/.github/workflows/deploy_quarto.yml@main
